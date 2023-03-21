@@ -34,6 +34,7 @@ static void dispatch_async_repeated(double intervalInSeconds, dispatch_queue_t q
 @property(nonatomic, strong) UITextField        *textField;
 @property(nonatomic, strong) STDebugTextView    *textView;
 @property(nonatomic, strong) STDPingServices    *pingServices;
+@property(nonatomic, assign) BOOL cancelPing;
 
 @end
 
@@ -88,6 +89,7 @@ static void dispatch_async_repeated(double intervalInSeconds, dispatch_queue_t q
 - (void)_pingActionFired:(UIButton *)button {
     [self.textField resignFirstResponder];
     if (button.tag == 10001) {
+        self.cancelPing = FALSE;
         __weak STDDebugPingViewController *weakSelf = self;
         [button setTitle:@"Stop" forState:UIControlStateNormal];
         button.tag = 10002;
@@ -95,6 +97,10 @@ static void dispatch_async_repeated(double intervalInSeconds, dispatch_queue_t q
         __block bool finish = false;
         dispatch_async_repeated(4.0, dispatch_get_main_queue(), ^(BOOL *stop) {
             count++;
+            if(self.cancelPing){
+                *stop = TRUE;
+                return;
+            }
             self.pingServices = [STDPingServices startPingAddress:self.textField.text callbackHandler:^(STDPingItem *pingItem, NSArray *pingItems) {
                 if (pingItem.status != STDPingStatusFinished) {
                     finish = false;
@@ -106,7 +112,7 @@ static void dispatch_async_repeated(double intervalInSeconds, dispatch_queue_t q
                 }
             }];
             self.pingServices.maximumPingTimes = 4;
-            if(count >= 1000){
+            if(count >= 2000){
                 if(finish){
                     [button setTitle:@"Ping" forState:UIControlStateNormal];
                     button.tag = 10001;
@@ -115,7 +121,10 @@ static void dispatch_async_repeated(double intervalInSeconds, dispatch_queue_t q
             }
         });
     } else {
+        self.cancelPing = TRUE;
         [self.pingServices cancel];
+        [button setTitle:@"Ping" forState:UIControlStateNormal];
+        button.tag = 10001;
     }
     
 }
