@@ -680,6 +680,8 @@ static void STSocketReadCallback(CFSocketRef s, CFSocketCallBackType type, CFDat
                         s = malloc(INET_ADDRSTRLEN);
                         inet_ntop(AF_INET, &(addr_in->sin_addr), s, INET_ADDRSTRLEN);
                         self.IPAddress = [NSString stringWithFormat:@"%s", s];
+                        free(s);
+                        s = NULL;
                         if (self.addressStyle != STSimplePingAddressStyleICMPv6) {
                             self.hostAddress = address;
                             resolved = true;
@@ -690,6 +692,8 @@ static void STSocketReadCallback(CFSocketRef s, CFSocketCallBackType type, CFDat
                         s = malloc(INET6_ADDRSTRLEN);
                         inet_ntop(AF_INET6, &(addr_in6->sin6_addr), s, INET6_ADDRSTRLEN);
                         self.IPAddress = [NSString stringWithFormat:@"%s", s];
+                        free(s);
+                        s = NULL;
                         if (self.addressStyle != STSimplePingAddressStyleICMPv4) {
                             self.hostAddress = address;
                             resolved = true;

@@ -32,26 +32,46 @@
     return super.description;
 }
 
-+ (NSString *)statisticsWithPingItems:(NSArray *)pingItems {
++ (NSString *)statisticsWithPingItems:(NSArray<STDPingItem *> *)pingItems {
     //    --- ping statistics ---
     //    5 packets transmitted, 5 packets received, 0.0% packet loss
     //    round-trip min/avg/max/stddev = 4.445/9.496/12.210/2.832 ms
     NSString *address = [pingItems.firstObject originalAddress];
     __block NSInteger receivedCount = 0, allCount = 0;
+    __block double min = DBL_MAX,max = 0,sum;
+    double avg;
     [pingItems enumerateObjectsUsingBlock:^(STDPingItem *obj, NSUInteger idx, BOOL *stop) {
         if (obj.status != STDPingStatusFinished && obj.status != STDPingStatusError) {
             allCount ++;
             if (obj.status == STDPingStatusDidReceivePacket) {
                 receivedCount ++;
+                if(obj.timeMilliseconds > 0){
+                    min = min > obj.timeMilliseconds? obj.timeMilliseconds : min;
+                    max = max > obj.timeMilliseconds? max : obj.timeMilliseconds;
+                    sum += obj.timeMilliseconds;
+                }
             }
         }
     }];
+    avg = sum / receivedCount;
+    __block double powSum;
+    [pingItems enumerateObjectsUsingBlock:^(STDPingItem *obj, NSUInteger idx, BOOL *stop) {
+        if (obj.status != STDPingStatusFinished && obj.status != STDPingStatusError) {
+            if (obj.status == STDPingStatusDidReceivePacket) {
+                powSum += pow(obj.timeMilliseconds - avg, 2);
+            }
+        }
+    }];
+    double stddev = sqrt(powSum / receivedCount);
+    if(min > max){
+        min = 0;
+    }
     
     NSMutableString *description = [NSMutableString stringWithCapacity:50];
     [description appendFormat:@"--- %@ ping statistics ---\n", address];
     
     CGFloat lossPercent = (CGFloat)(allCount - receivedCount) / MAX(1.0, allCount) * 100;
-    [description appendFormat:@"%ld packets transmitted, %ld packets received, %.1f%% packet loss\n", (long)allCount, (long)receivedCount, lossPercent];
+    [description appendFormat:@"%ld packets transmitted, %ld packets received, %.1f%% packet loss\nround-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms", (long)allCount, (long)receivedCount, lossPercent, min, avg, max, stddev];
     return [description stringByReplacingOccurrencesOfString:@".0%" withString:@"%"];
 }
 @end
